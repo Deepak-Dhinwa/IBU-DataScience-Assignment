@@ -1,0 +1,279 @@
+Personal Bills and Expenses - Detailed Financial Data
+
+=== Monthly Expense Summary (2025) ===
+
+January 2025:
+- Rent: $1,200.00
+- Utilities (Electricity): $85.50
+- Utilities (Water): $45.00
+- Utilities (Internet): $79.99
+- Groceries: $320.50
+- Transportation: $180.25
+- Entertainment: $95.00
+- Subscriptions: $45.99
+- Healthcare: $120.00
+- Miscellaneous: $75.25
+Total: $2,247.48
+
+February 2025:
+- Rent: $1,200.00
+- Utilities (Electricity): $92.30
+- Utilities (Water): $42.50
+- Utilities (Internet): $79.99
+- Groceries: $335.75
+- Transportation: $195.50
+- Entertainment: $110.00
+- Subscriptions: $45.99
+- Healthcare: $135.00
+- Miscellaneous: $82.50
+Total: $2,318.53
+
+March 2025:
+- Rent: $1,200.00
+- Utilities (Electricity): $78.20
+- Utilities (Water): $48.00
+- Utilities (Internet): $79.99
+- Groceries: $315.25
+- Transportation: $175.00
+- Entertainment: $125.50
+- Subscriptions: $45.99
+- Healthcare: $150.00
+- Miscellaneous: $68.75
+Total: $2,227.68
+
+April 2025:
+- Rent: $1,200.00
+- Utilities (Electricity): $95.80
+- Utilities (Water): $46.50
+- Utilities (Internet): $79.99
+- Groceries: $342.00
+- Transportation: $205.25
+- Entertainment: $88.00
+- Subscriptions: $45.99
+- Healthcare: $125.00
+- Miscellaneous: $90.00
+Total: $2,318.53
+
+May 2025:
+- Rent: $1,200.00
+- Utilities (Electricity): $105.50
+- Utilities (Water): $50.00
+- Utilities (Internet): $79.99
+- Groceries: $358.75
+- Transportation: $220.00
+- Entertainment: $142.50
+- Subscriptions: $45.99
+- Healthcare: $140.00
+- Miscellaneous: $95.25
+Total: $2,437.98
+
+June 2025:
+- Rent: $1,200.00
+- Utilities (Electricity): $115.25
+- Utilities (Water): $52.50
+- Utilities (Internet): $79.99
+- Groceries: $365.50
+- Transportation: $235.75
+- Entertainment: $155.00
+- Subscriptions: $45.99
+- Healthcare: $145.00
+- Miscellaneous: $105.50
+Total: $2,501.48
+
+=== Category Breakdown (Jan-Jun 2025) ===
+
+Rent (6 months): $7,200.00 (53.4% of total expenses)
+Utilities Total: $1,915.04 (14.2% of total expenses)
+  - Electricity: $571.65 (4.2%)
+  - Water: $284.50 (2.1%)
+  - Internet: $479.94 (3.6%)
+Groceries: $2,037.75 (15.1% of total expenses)
+Transportation: $1,211.75 (9.0% of total expenses)
+Entertainment: $716.00 (5.3% of total expenses)
+Subscriptions: $275.94 (2.0% of total expenses)
+Healthcare: $815.00 (6.0% of total expenses)
+Miscellaneous: $516.25 (3.8% of total expenses)
+
+Grand Total (Jan-Jun 2025): $13,488.78
+
+=== Subscriptions Detail ===
+
+Streaming Services:
+- Netflix: $15.99/month
+- Spotify: $9.99/month
+- Disney+: $10.99/month
+- Amazon Prime: $8.99/month
+Total Streaming: $45.96/month
+
+=== Monthly Trends Analysis ===
+
+January 2025: $2,247.48 (Baseline)
+February 2025: $2,318.53 (+3.2% increase)
+March 2025: $2,227.68 (-3.9% decrease)
+April 2025: $2,318.53 (+4.1% increase)
+May 2025: $2,437.98 (+5.1% increase)
+June 2025: $2,501.48 (+2.6% increase)
+
+Average Monthly Expense: $2,248.13
+Highest Month: June 2025 ($2,501.48)
+Lowest Month: March 2025 ($2,227.68)
+Variance: $273.80 (11.3% of average)
+
+=== Utility Usage Trends ===
+
+Electricity:
+- January: $85.50 (420 kWh)
+- February: $92.30 (453 kWh)
+- March: $78.20 (384 kWh)
+- April: $95.80 (470 kWh)
+- May: $105.50 (518 kWh)
+- June: $115.25 (566 kWh)
+Average: $88.93/month
+Trend: Increasing (+34.8% from Jan to Jun)
+
+Water:
+- January: $45.00 (3,200 gallons)
+- February: $42.50 (3,025 gallons)
+- March: $48.00 (3,415 gallons)
+- April: $46.50 (3,310 gallons)
+- May: $50.00 (3,560 gallons)
+- June: $52.50 (3,740 gallons)
+Average: $47.42/month
+Trend: Increasing (+16.7% from Jan to Jun)
+
+=== Transportation Breakdown ===
+
+Gasoline Expenses:
+- January: $120.25 (35.2 gallons @ $3.42/gal)
+- February: $130.50 (38.1 gallons @ $3.42/gal)
+- March: $115.00 (33.6 gallons @ $3.42/gal)
+- April: $140.25 (41.0 gallons @ $3.42/gal)
+- May: $155.00 (45.3 gallons @ $3.42/gal)
+- June: $165.75 (48.4 gallons @ $3.42/gal)
+Total Gas: $826.75 (241.6 gallons)
+
+Public Transit:
+- January: $60.00 (monthly pass)
+- February: $65.00 (monthly pass)
+- March: $60.00 (monthly pass)
+- April: $65.00 (monthly pass)
+- May: $65.00 (monthly pass)
+- June: $70.00 (monthly pass)
+Total Transit: $385.00
+
+=== Grocery Spending by Category ===
+
+Meat & Protein: $612.25 (30.0% of groceries)
+Fruits & Vegetables: $488.50 (24.0% of groceries)
+Dairy Products: $305.75 (15.0% of groceries)
+Grains & Bread: $244.50 (12.0% of groceries)
+Snacks & Beverages: $183.25 (9.0% of groceries)
+Frozen Foods: $122.25 (6.0% of groceries)
+Other Items: $81.25 (4.0% of groceries)
+
+=== Entertainment Spending ===
+
+Restaurants & Dining:
+- January: $65.00 (8 meals)
+- February: $75.00 (9 meals)
+- March: $85.50 (10 meals)
+- April: $55.00 (7 meals)
+- May: $95.00 (11 meals)
+- June: $110.00 (12 meals)
+Total Dining: $485.50
+Average per meal: $9.70
+
+Movies & Events:
+- January: $30.00 (3 movies)
+- February: $35.00 (3 movies)
+- March: $40.00 (4 movies)
+- April: $33.00 (3 movies)
+- May: $47.50 (4 movies)
+- June: $45.00 (4 movies)
+Total Entertainment: $230.50
+Average per movie: $11.02
+
+=== Healthcare Expenses ===
+
+Insurance Premium: $125.00/month (total: $750.00)
+Doctor Visits:
+- January: $0 (no visits)
+- February: $10.00 copay (1 visit)
+- March: $25.00 (2 visits, $10 each + $5 prescription)
+- April: $0 (no visits)
+- May: $15.00 copay (1 visit)
+- June: $10.00 copay (1 visit)
+Total Copays: $60.00
+Prescription Medications: $5.00
+
+=== Budget vs Actual (Jan-Jun 2025) ===
+
+Budgeted Amounts:
+- Rent: $1,200.00/month (on target - 100%)
+- Utilities: $200.00/month (under budget - avg $159.59/month, 79.8%)
+- Groceries: $350.00/month (under budget - avg $339.63/month, 97.0%)
+- Transportation: $200.00/month (over budget - avg $201.96/month, 101.0%)
+- Entertainment: $100.00/month (over budget - avg $119.33/month, 119.3%)
+- Healthcare: $150.00/month (under budget - avg $135.83/month, 90.6%)
+
+=== Percentage Distribution (Total Expenses) ===
+
+Rent: 53.4%
+Groceries: 15.1%
+Utilities: 14.2%
+Transportation: 9.0%
+Healthcare: 6.0%
+Entertainment: 5.3%
+Miscellaneous: 3.8%
+Subscriptions: 2.0%
+
+=== Quarterly Comparison ===
+
+Q1 2025 (Jan-Mar): $6,793.69
+Q2 2025 (Apr-Jun): $6,695.09
+Q2 vs Q1: -$98.60 (-1.5% decrease)
+
+=== Year-to-Date Projections ===
+
+Based on Jan-Jun average ($2,248.13/month):
+- Projected Annual Total: $26,977.56
+- Remaining 6 months projection: $13,488.78
+- Current spending rate: 50.0% of projected annual budget
+
+=== Savings Rate ===
+
+Monthly Income: $3,500.00
+Monthly Expenses (avg): $2,248.13
+Monthly Savings: $1,251.87
+Savings Rate: 35.8%
+Year-to-Date Savings: $7,511.22
+
+=== Expense Efficiency Metrics ===
+
+Cost per Day (Average): $74.94/day
+Cost per Week (Average): $524.60/week
+Essential Expenses (Rent + Utilities + Groceries): 82.7% of total
+Discretionary Expenses (Entertainment + Misc): 9.1% of total
+
+=== Top Spending Categories (Ranked) ===
+
+1. Rent: $7,200.00 (53.4%)
+2. Groceries: $2,037.75 (15.1%)
+3. Total Utilities: $1,915.04 (14.2%)
+4. Transportation: $1,211.75 (9.0%)
+5. Healthcare: $815.00 (6.0%)
+6. Entertainment: $716.00 (5.3%)
+7. Miscellaneous: $516.25 (3.8%)
+8. Subscriptions: $275.94 (2.0%)
+
+=== Cost Analysis by Percentage Growth ===
+
+Compared to January baseline:
+- February: +3.2%
+- March: -3.9%
+- April: +4.1%
+- May: +5.1%
+- June: +2.6%
+
+Overall trend: Increasing expenses, average monthly growth of 2.2%
+

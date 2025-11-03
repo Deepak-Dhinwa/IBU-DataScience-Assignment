@@ -1,0 +1,89 @@
+ME 323 Project - Multi-Hopper Laser Directed Energy Deposition Setup
+
+=== Project Overview ===
+Project Type: Research and Development Project
+Course: ME 323 - Advanced Manufacturing Systems
+Semester: Fall 2025
+Project Duration: September 2025 - December 2025 (15 weeks)
+
+=== Project Team ===
+Team Leader: Deepak Dhinwa
+Team Member 1: Khushi Sharma
+Team Member 2: Tanishq Narankar
+Instructor: Dr. Michael Rodriguez
+Industry Mentor: James Wilson (Advanced Manufacturing Corp)
+
+=== Project Objectives ===
+1. Design and develop a multi-hopper L-DED system for in-situ alloying
+2. Implement real-time process monitoring
+3. Achieve material mixing accuracy of ±2% composition
+4. Optimize deposition parameters for various metal powders
+
+=== Project Milestones ===
+Milestone 1: Literature Review and Design Proposal (Week 3)
+  - Status: Completed
+  - Grade: 92/100
+  
+Milestone 2: System Design and CAD Modeling (Week 6)
+  - Status: Completed
+  - Grade: 88/100
+  
+Milestone 3: Prototype Assembly (Week 9)
+  - Status: In Progress (75% complete)
+  
+Milestone 4: Testing and Calibration (Week 12)
+  - Status: Not Started
+  
+Milestone 5: Final Report and Presentation (Week 15)
+  - Status: Not Started
+
+=== Budget Allocation ===
+Total Budget: $5,000
+- Materials: $2,500 (50%)
+- Equipment: $1,500 (30%)
+- Software Licenses: $500 (10%)
+- Miscellaneous: $500 (10%)
+
+Current Spending: $3,200 (64% of budget used)
+
+=== Technical Specifications ===
+- Number of Hoppers: 4
+- Powder Flow Rate: 0.5-5.0 g/min per hopper
+- Laser Power: 200-1000W continuous
+- Build Volume: 150mm x 150mm x 100mm
+- Layer Thickness: 0.1-0.5mm
+- Positioning Accuracy: ±0.05mm
+
+=== Performance Metrics ===
+Target Metrics:
+- Deposition Rate: 10-20 g/min
+- Material Utilization: >85%
+- Surface Roughness: Ra < 10μm
+- Dimensional Accuracy: ±0.1mm
+
+Current Achievement:
+- Deposition Rate: 12 g/min (60% of target)
+- Material Utilization: 72% (below target)
+- Surface Roughness: Ra 8μm (met target)
+- Dimensional Accuracy: ±0.08mm (met target)
+
+=== Risks and Challenges ===
+1. Powder clogging in hoppers (High Priority)
+   - Mitigation: Implement vibration system
+   - Status: Under testing
+   
+2. Thermal management (Medium Priority)
+   - Mitigation: Active cooling system
+   - Status: Design phase
+   
+3. Budget overrun (Low Priority)
+   - Mitigation: Optimize material orders
+   - Status: Monitoring
+
+=== Project Timeline ===
+Weeks 1-3: Research and Proposal
+Weeks 4-6: Design Phase
+Weeks 7-9: Manufacturing and Assembly
+Weeks 10-12: Testing and Optimization
+Weeks 13-15: Documentation and Presentation
+

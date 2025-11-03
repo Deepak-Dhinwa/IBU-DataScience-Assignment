@@ -1,0 +1,941 @@
+import os
+import torch
+import time
+from datetime import datetime
+try:
+    from langchain_chroma import Chroma
+    CHROMA_NEW_VERSION = True
+except ImportError:
+    from langchain_community.vectorstores import Chroma
+    CHROMA_NEW_VERSION = False
+from langchain_community.document_loaders import PyPDFLoader, TextLoader
+# Better PDF parsing options
+try:
+    from langchain_community.document_loaders import UnstructuredPDFLoader
+    HAS_UNSTRUCTURED = True
+except ImportError:
+    HAS_UNSTRUCTURED = False
+# PyMuPDF will be checked at runtime in ingest_document()
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_ollama import ChatOllama, OllamaEmbeddings
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig, pipeline
+from peft import PeftModel
+import plotly.graph_objects as go
+import plotly.express as px
+import json
+import re
+
+# --- 1. FEATURE FLAG ---
+# This is the "switch" for your fine-tuned model.
+# Set to False to use the llama3 fallback (for testing/demo).
+# Set to True to attempt to load your fine-tuned Phi-3 model (requires high VRAM).
+USE_CUSTOM_FINETUNED_MODEL = False
+CUSTOM_MODEL_NAME = "insight-agent:latest" # The name we will use after 'ollama create'
+
+# --- 2. SETUP: LLM and Embedding Model ---
+
+try:
+    # This is our reliable fallback and general-purpose LLM
+    llm = ChatOllama(model="llama3:latest") 
+    print("ChatOllama (llama3:latest) loaded successfully.")
+except Exception as e:
+    print(f"Error loading ChatOllama: {e}. Is 'ollama serve' running?")
+    llm = None
+
+# --- EMBEDDING MODEL CONFIGURATION ---
+# Options (in order of preference):
+# 1. nomic-embed-text:latest - Good balance, 8192 context length, performs well
+# 2. nomic-embed-text-v1.5 - Slightly better if available
+# 3. mxbai-embed-large - Alternative high-performance model
+EMBEDDING_MODEL_NAME = "nomic-embed-text:latest"  # Change this to try different models
+
+print(f"Loading Ollama embedding model ({EMBEDDING_MODEL_NAME})...")
+try:
+    embedding_model = OllamaEmbeddings(model=EMBEDDING_MODEL_NAME)
+    print(f"OllamaEmbeddings ({EMBEDDING_MODEL_NAME}) loaded successfully.")
+    print(f"Note: nomic-embed-text is excellent - outperforms OpenAI ada-002 and has 8192 context length.")
+except Exception as e:
+    print(f"Error loading OllamaEmbeddings: {e}. Is 'ollama serve' running?")
+    print("Trying fallback: nomic-embed-text:latest...")
+    try:
+        embedding_model = OllamaEmbeddings(model="nomic-embed-text:latest")
+        print("Fallback embedding model loaded successfully.")
+    except Exception as e2:
+        print(f"Fallback also failed: {e2}")
+        embedding_model = None
+
+CHROMA_DB_PATH = "./chroma_db"
+ADAPTER_PATH = "./insight_writer_adapters"
+
+# --- 3. FINE-TUNED MODEL LOADING (Controlled by Feature Flag) ---
+
+def load_insight_writer_pipeline():
+    """
+    Loads the fine-tuned Phi-3 model *OR* the custom Ollama model.
+    """
+    global llm  # We might re-assign the main 'llm' if the custom model loads
+    
+    if not USE_CUSTOM_FINETUNED_MODEL:
+        print("--- NOTE: USE_CUSTOM_FINETUNED_MODEL=False. Using llama3 fallback. ---")
+        return None # Return None to trigger the fallback logic in run_insight_writer
+
+    # --- Path A: Load the Custom Ollama Model (The FINAL Plan) ---
+    # This is for when your 'ollama create' is done.
+    try:
+        print(f"Attempting to load custom fine-tuned model from Ollama: {CUSTOM_MODEL_NAME}")
+        custom_llm = ChatOllama(model=CUSTOM_MODEL_NAME)
+        # Test the model
+        custom_llm.invoke("test")
+        print(f"Successfully loaded custom model '{CUSTOM_MODEL_NAME}'.")
+        # Set our *main* llm to be the custom one for all tasks!
+        llm = custom_llm 
+        # We return a *dummy pipeline* just to signal success (since Ollama is now the pipeline)
+        return "OLLAMA_LOADED" 
+    except Exception as e:
+        print(f"--- WARNING: Could not load '{CUSTOM_MODEL_NAME}' from Ollama. ---")
+        print(f"Error: {e}")
+        print("Falling back to transformers... (This will likely crash)")
+
+    # --- Path B: Load with Transformers (The OOM-Crash Plan) ---
+    # This code is here as our "source code" deliverable.
+    if not os.path.exists(ADAPTER_PATH):
+        print(f"---!!! WARNING: Adapter path not found: {ADAPTER_PATH}. Using llama3 fallback. !!!---")
+        return None
+    try:
+        print("Loading fine-tuned Insight Writer model via Transformers...")
+        base_model_id = "microsoft/Phi-3-mini-4k-instruct"
+        bnb_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_use_double_quant=True)
+        base_model = AutoModelForCausalLM.from_pretrained(base_model_id, quantization_config=bnb_config, device_map="auto", trust_remote_code=True)
+        tokenizer = AutoTokenizer.from_pretrained(base_model_id, trust_remote_code=True)
+        tokenizer.pad_token = tokenizer.eos_token
+        print(f"Loading adapters from {ADAPTER_PATH}...")
+        lora_model = PeftModel.from_pretrained(base_model, ADAPTER_PATH)
+        lora_model.eval()
+        print("Fine-tuned model (Transformers) loaded successfully.")
+        return pipeline("text-generation", model=lora_model, tokenizer=tokenizer, max_new_tokens=150, torch_dtype=torch.bfloat16)
+    except Exception as e:
+        print(f"---!!! FAILED TO LOAD FINE-TUNED MODEL (Likely OOM) !!!---: {e}")
+        print("--- Using llama3 fallback. ---")
+        return None
+
+# This line runs when the app starts:
+insight_writer_pipeline = load_insight_writer_pipeline()
+
+# --- 4. INGESTION LAYER AGENTS (WITH TIMESTAMPS) ---
+def ingest_document(file_path: str, folder_name: str) -> str:
+    """
+    Enhanced document ingestion with better PDF parsing for complex documents (PPT-converted PDFs, etc.)
+    """
+    try:
+        print(f"Starting ingestion for {file_path} into folder '{folder_name}'...")
+        
+        if file_path.endswith(".pdf"):
+            # Try better PDF parsers first (for complex layouts, PPT-converted PDFs, etc.)
+            # Fallback to PyPDFLoader if others fail
+            documents = None
+            load_error = None
+            
+            # Option 1: PyMuPDF (fitz) - Best for complex layouts and PPT-converted PDFs
+            try:
+                import fitz  # PyMuPDF
+                print("Attempting PDF parsing with PyMuPDF (better for complex layouts)...")
+                pdf_doc = fitz.open(file_path)
+                pages = []
+                for page_num in range(len(pdf_doc)):
+                    page = pdf_doc[page_num]
+                    # Better text extraction with layout preservation
+                    text = page.get_text("text")
+                    if text.strip():  # Only add non-empty pages
+                        pages.append({"page_content": text, "metadata": {"page": page_num + 1}})
+                pdf_doc.close()
+                if pages:
+                    from langchain_core.documents import Document
+                    documents = [Document(page_content=p["page_content"], metadata=p["metadata"]) for p in pages]
+                    print(f"Successfully parsed PDF with PyMuPDF ({len(documents)} pages).")
+            except ImportError:
+                # PyMuPDF not installed, skip this method
+                pass
+            except Exception as e:
+                load_error = f"PyMuPDF failed: {e}. "
+                print(f"PyMuPDF parsing failed: {e}, trying fallback...")
+            
+            # Option 2: UnstructuredPDFLoader - Excellent for complex documents
+            if documents is None and HAS_UNSTRUCTURED:
+                try:
+                    print("Attempting PDF parsing with UnstructuredPDFLoader (best for complex docs)...")
+                    loader = UnstructuredPDFLoader(file_path, mode="elements", strategy="fast")
+                    documents = loader.load()
+                    if documents:
+                        print(f"Successfully parsed PDF with UnstructuredPDFLoader ({len(documents)} elements).")
+                except Exception as e:
+                    load_error = (load_error or "") + f"UnstructuredPDFLoader failed: {e}. "
+                    print(f"UnstructuredPDFLoader parsing failed: {e}, trying fallback...")
+            
+            # Option 3: Fallback to PyPDFLoader (basic, but reliable)
+            if documents is None:
+                try:
+                    print("Using PyPDFLoader as fallback (basic PDF parsing)...")
+                    print(f"Note: {load_error or ''}PyPDFLoader may struggle with complex layouts from PPT-converted PDFs.")
+                    loader = PyPDFLoader(file_path)
+                    documents = loader.load()
+                    if documents:
+                        print(f"Successfully parsed PDF with PyPDFLoader ({len(documents)} pages).")
+                except Exception as e:
+                    return f"Error: All PDF parsing methods failed. {load_error or ''}Final error: {e}"
+                    
+            if not documents or len(documents) == 0:
+                return f"Error: PDF file appears to be empty or could not be parsed: {file_path}"
+                
+        elif file_path.endswith(".txt"):
+            loader = TextLoader(file_path)
+            documents = loader.load()
+        else:
+            return f"Error: Unsupported file type: {file_path}"
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        chunks = text_splitter.split_documents(documents)
+        current_time = int(time.time())
+        for chunk in chunks:
+            chunk.metadata["folder"] = folder_name
+            chunk.metadata["source"] = file_path
+            chunk.metadata["timestamp"] = current_time
+        if embedding_model is None:
+            return "Error: Embedding model is not loaded."
+        vector_store = Chroma(persist_directory=CHROMA_DB_PATH, embedding_function=embedding_model)
+        vector_store.add_documents(chunks)
+        # Chroma 0.4.x+ auto-persists, so .persist() is no longer needed
+        if not CHROMA_NEW_VERSION:
+            try:
+                vector_store.persist()
+            except Exception:
+                pass  # Already auto-persisted
+        print(f"Successfully ingested {len(chunks)} chunks from {file_path}.")
+        return f"Successfully ingested {file_path} into folder '{folder_name}'."
+    except Exception as e:
+        print(f"Error during ingestion: {e}")
+        return f"Error ingesting file: {e}"
+
+def ingest_text_note(text_content: str, folder_name: str) -> str:
+    try:
+        print(f"Ingesting text note into folder '{folder_name}'...")
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+        chunks = text_splitter.create_documents([text_content])
+        current_time = int(time.time())
+        for chunk in chunks:
+            chunk.metadata["folder"] = folder_name
+            chunk.metadata["source"] = "text_note"
+            chunk.metadata["timestamp"] = current_time
+        if embedding_model is None:
+            return "Error: Embedding model is not loaded."
+        vector_store = Chroma(persist_directory=CHROMA_DB_PATH, embedding_function=embedding_model)
+        vector_store.add_documents(chunks)
+        # Chroma 0.4.x+ auto-persists, so .persist() is no longer needed
+        if not CHROMA_NEW_VERSION:
+            try:
+                vector_store.persist()
+            except Exception:
+                pass  # Already auto-persisted
+        print(f"Successfully ingested text note into folder '{folder_name}'.")
+        return f"Successfully ingested text note into folder '{folder_name}'."
+    except Exception as e:
+        print(f"Error ingesting text note: {e}")
+        return f"Error ingesting text note: {e}"
+
+def list_ingested_documents() -> dict:
+    """
+    Lists all ingested documents with their metadata.
+    Returns a dictionary with folder statistics and document details.
+    """
+    try:
+        if embedding_model is None:
+            return {"error": "Embedding model is not loaded."}
+        
+        vector_store = Chroma(persist_directory=CHROMA_DB_PATH, embedding_function=embedding_model)
+        
+        # Get all documents with their metadata
+        all_data = vector_store.get(include=["metadatas", "documents"])
+        
+        if not all_data or not all_data.get('metadatas'):
+            return {
+                "total_chunks": 0,
+                "total_documents": 0,
+                "folders": {},
+                "documents": []
+            }
+        
+        metadatas = all_data['metadatas']
+        documents = all_data.get('documents', [])
+        
+        # Group by source (unique documents)
+        doc_info = {}
+        folder_stats = {}
+        
+        for i, metadata in enumerate(metadatas):
+            source = metadata.get('source', 'unknown')
+            folder = metadata.get('folder', 'unknown')
+            timestamp = metadata.get('timestamp', 0)
+            
+            # Track folder statistics
+            if folder not in folder_stats:
+                folder_stats[folder] = {"chunks": 0, "documents": set()}
+            folder_stats[folder]["chunks"] += 1
+            folder_stats[folder]["documents"].add(source)
+            
+            # Track unique documents
+            if source not in doc_info:
+                doc_info[source] = {
+                    "source": source,
+                    "folder": folder,
+                    "chunks": 0,
+                    "timestamp": timestamp,
+                    "ingested_date": datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S") if timestamp else "Unknown"
+                }
+            doc_info[source]["chunks"] += 1
+        
+        # Convert folder stats to regular dict
+        folder_stats_final = {}
+        for folder, stats in folder_stats.items():
+            folder_stats_final[folder] = {
+                "chunks": stats["chunks"],
+                "unique_documents": len(stats["documents"])
+            }
+        
+        # Convert doc_info to list
+        documents_list = list(doc_info.values())
+        documents_list.sort(key=lambda x: x["timestamp"], reverse=True)  # Most recent first
+        
+        return {
+            "total_chunks": len(metadatas),
+            "total_documents": len(doc_info),
+            "folders": folder_stats_final,
+            "documents": documents_list
+        }
+    except Exception as e:
+        print(f"Error listing documents: {e}")
+        return {"error": f"Error listing documents: {e}"}
+
+# --- 5. RETRIEVAL & REASONING LAYER (MULTI-FOLDER, TOP_K, DATE) ---
+def recall_from_folder(query: str, folders: list[str], top_k: int, start_date=None, end_date=None) -> (str, str, list):
+    try:
+        print(f"Recalling from folders {folders} with query: '{query}'")
+        if embedding_model is None:
+            return "Error: Embedding model is not loaded.", "", []
+        if llm is None:
+            return "Error: Base LLM is not loaded.", "", []
+        vector_store = Chroma(persist_directory=CHROMA_DB_PATH, embedding_function=embedding_model)
+        
+        # --- BUG FIX: CHROMA FILTER LOGIC ---
+        filter_parts = []
+        if folders:
+            # Create a list of {"folder": folder} dicts
+            folder_or_clauses = [{"folder": f} for f in folders]
+            # Use "$or" if there are multiple folders
+            if len(folder_or_clauses) > 1:
+                filter_parts.append({"$or": folder_or_clauses})
+            else:
+                filter_parts.append(folder_or_clauses[0])
+        
+        if start_date and end_date:
+            # BUG FIX: Chroma doesn't support $gte and $lte in same dict
+            # Need to split into separate $and conditions
+            start_datetime = datetime.combine(start_date, datetime.min.time())
+            end_datetime = datetime.combine(end_date, datetime.max.time())
+            start_ts = int(start_datetime.timestamp())
+            end_ts = int(end_datetime.timestamp())
+            filter_parts.append({"timestamp": {"$gte": start_ts}})
+            filter_parts.append({"timestamp": {"$lte": end_ts}})
+        
+        # Combine all filter parts using "$and"
+        # If no filters, use None (searches all documents)
+        filter_metadata = None
+        if len(filter_parts) > 1:
+            filter_metadata = {"$and": filter_parts}
+        elif len(filter_parts) == 1:
+            filter_metadata = filter_parts[0]
+        # --- END BUG FIX ---
+        
+        print(f"Using filter: {filter_metadata}")
+        
+        # Only pass filter if it's not None/empty
+        search_kwargs = {"k": top_k}
+        if filter_metadata:
+            search_kwargs["filter"] = filter_metadata
+        retriever = vector_store.as_retriever(search_type="similarity", search_kwargs=search_kwargs)
+        retrieved_docs = retriever.invoke(query)
+        context = "\n\n".join([doc.page_content for doc in retrieved_docs])
+        citations = list(set([f"Source: {os.path.basename(doc.metadata.get('source', 'unknown'))} (Folder: {doc.metadata.get('folder', 'unknown')})" for doc in retrieved_docs]))
+        
+        if not context:
+            return "I found no relevant information for your query with the selected filters.", "", []
+
+        # --- "Refiner Agent" ---
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", """You are a factual refining agent that synthesizes messy data chunks into clear, accurate answers.
+
+**Your Task:**
+Synthesize the provided data chunks into a clean, direct, factual answer to the user's query.
+
+**Rules:**
+1. Answer ONLY based on the provided context - do not use outside knowledge
+2. Do NOT add opinions, reflections, or personal insights
+3. Combine related information from multiple chunks logically
+4. If information is missing or unclear, state that explicitly
+5. Use clear, structured formatting (bullets or numbered lists if helpful)
+6. Cite which parts of the context support your answer when relevant
+
+**When the answer is not in the context:**
+Clearly state: "Based on the available data, I cannot find information to answer this query. The context does not contain relevant information about [specific aspect of the query]."
+
+**Context Data:**
+{context}"""),
+            ("user", "User Query: {query}\n\nProvide a clear, factual answer based only on the context above.")
+        ])
+        chain = prompt | llm | StrOutputParser()
+        response = chain.invoke({"context": context, "query": query})
+        return response, context, citations
+    except Exception as e:
+        print(f"Error during recall: {e}")
+        return f"Error recalling from folder: {e}", "", []
+
+# --- 6. ANALYSIS LAYER (SPECIALIZED AGENTS) ---
+def run_insight_writer(data_blob: str) -> str:
+    """
+    Runs the fine-tuned Insight Writer *or* its llama3 fallback. (The "Coach")
+    """
+    if insight_writer_pipeline is None:
+        # --- FALLBACK PATH (llama3) ---
+        print("Insight Writer (Fallback): Running llama3 model.")
+        if llm is None: return "Error: Base LLM is not loaded."
+        prompt = ChatPromptTemplate.from_messages([
+             ("system", """You are a concise, empathetic insight writer. Your job is to extract meaningful personal insights from data - NO FLUFF, NO VERBOSITY.
+
+**RULES:**
+- Maximum 2-3 SHORT paragraphs (100-150 words total)
+- Be direct and specific - cut out flowery language
+- Focus ONLY on what the data actually shows
+- If data shows emotional content, mention it briefly
+- If data is just factual (course info, events), acknowledge that - don't force emotional insights where none exist
+- No generic life coaching advice unless data explicitly warrants it
+
+**Output Format:**
+Paragraph 1 (1-2 sentences): What the data reveals about their current state/situation
+Paragraph 2 (1-2 sentences): Any patterns, concerns, or positive aspects visible
+Paragraph 3 (OPTIONAL, 1 sentence): One brief, actionable takeaway if clear
+
+**BAD EXAMPLE (Too verbose):**
+"As I reflect on this data chunk from your memory, I sense a sense of calmness..."
+
+**GOOD EXAMPLE (Concise):**
+"Your data shows focus on ME319 course structure and scheduling. The attention to details like homework percentages (10%) and exam breakdowns suggests organized planning. Consider tracking your actual performance against these structures to identify what's working."
+
+**Data:**
+{data}"""),
+             ("user", "Write a concise (2-3 short paragraphs max), direct insight based on this data. Be specific, avoid fluff.")
+        ])
+        chain = prompt | llm | StrOutputParser()
+        response = chain.invoke({"data": data_blob})
+        
+        # Post-process: Trim if too verbose (fallback mode)
+        if len(response) > 250:
+            print("Insight Writer: Response too verbose, trimming...")
+            trim_prompt = ChatPromptTemplate.from_messages([
+                ("system", """Trim this insight to max 150 words (2-3 short paragraphs). Remove flowery language, keep only specific insights."""),
+                ("user", "Trim to max 150 words:\n\n{insight}")
+            ])
+            trim_chain = trim_prompt | llm | StrOutputParser()
+            response = trim_chain.invoke({"insight": response})
+        
+        return response
+
+    # --- PRIMARY PATH (Fine-Tuned Model) ---
+    # This path runs if the pipeline loaded successfully
+    try:
+        # This is for the custom Ollama model
+        if insight_writer_pipeline == "OLLAMA_LOADED":
+            print(f"Running custom fine-tuned Ollama model: {CUSTOM_MODEL_NAME}")
+            prompt_text = f"Data: {data_blob}\nTask: Write a concise insight (2-3 paragraphs, max 150 words)."
+            full_prompt_text = f"""You are a reflective insight agent, trained to be an empathetic coach.
+Respond to the following task in your fine-tuned style. Keep it concise (max 150 words).
+TASK:
+{prompt_text}"""
+            chain = ChatPromptTemplate.from_template(full_prompt_text) | llm | StrOutputParser()
+            response = chain.invoke({})
+            
+            # Post-process: Trim if too verbose (Ollama fine-tuned mode)
+            if len(response) > 250:
+                print("Insight Writer (Ollama Fine-tuned): Response too verbose, trimming...")
+                trim_prompt = ChatPromptTemplate.from_messages([
+                    ("system", """Trim this insight to max 150 words. Remove flowery language, keep only specific insights."""),
+                    ("user", "Trim to max 150 words:\n\n{insight}")
+                ])
+                trim_chain = trim_prompt | llm | StrOutputParser()
+                response = trim_chain.invoke({"insight": response})
+            
+            return response
+
+        # This is for the Transformers/PEFT pipeline
+        else:
+            print(f"Running fine-tuned Transformers pipeline on: {data_blob[:200]}...")
+            prompt = f"<s>[INST] Data: {data_blob}\nTask: Write a concise insight (2-3 paragraphs, max 150 words). [/INST]"
+            result = insight_writer_pipeline(prompt)
+            full_text = result[0]['generated_text']
+            response = full_text.split("[/INST]")[-1].strip().replace("</s>", "")
+            
+            # Post-process: Trim if too verbose (fine-tuned mode)
+            if len(response) > 250:
+                print("Insight Writer (Fine-tuned): Response too verbose, trimming...")
+                if llm is not None:
+                    trim_prompt = ChatPromptTemplate.from_messages([
+                        ("system", """Trim this insight to max 150 words. Remove flowery language, keep only specific insights."""),
+                        ("user", "Trim to max 150 words:\n\n{insight}")
+                    ])
+                    trim_chain = trim_prompt | llm | StrOutputParser()
+                    response = trim_chain.invoke({"insight": response})
+            
+            return response
+    except Exception as e:
+        print(f"Error running insight writer pipeline: {e}")
+        return f"Error: {e}"
+
+def run_pattern_miner(data_blob: str) -> str:
+    """
+    Advanced Pattern Miner with structured multi-step analysis.
+    Identifies multiple pattern types: temporal trends, frequency patterns, correlations, and anomalies.
+    """
+    try:
+        print(f"Running Advanced Pattern Miner on: {data_blob[:200]}...")
+        if llm is None: return "Error: Base LLM is not loaded."
+        
+        # Step 1: Structured Analysis Phase - Categorized Patterns
+        analysis_prompt = ChatPromptTemplate.from_messages([
+            ("system", """You are a Pattern Miner. Extract and categorize real patterns from the data.
+
+**Categorize Patterns Into:**
+1. **Statistical**: Trends, distributions, frequencies, counts (quantitative measures)
+2. **Quantitative**: Numbers, percentages, ratios, measurable metrics explicitly mentioned
+3. **Qualitative**: Themes, topics, sentiment, categorical observations
+4. **Relationships**: Connections, correlations, dependencies between entities/concepts
+
+**Pattern Format for Each:**
+- Name: [Brief pattern name]
+- Type: [Statistical/Quantitative/Qualitative/Relationship]
+- Evidence: [Specific quote or number from data]
+- Strength: [Weak/Moderate/Strong]
+
+**Output Format:**
+```
+=== PATTERN ANALYSIS ===
+
+**Statistical Patterns:**
+- [Pattern Name] (Strength: [Weak/Moderate/Strong])
+  Evidence: [specific numbers, trends, counts]
+
+**Quantitative Patterns:**
+- [Pattern Name] (Strength: [Weak/Moderate/Strong])
+  Evidence: [specific metrics, percentages, ratios]
+
+**Qualitative Patterns:**
+- [Pattern Name] (Strength: [Weak/Moderate/Strong])
+  Evidence: [specific themes, topics mentioned]
+
+**Relationships:**
+- [Pattern Name] (Strength: [Weak/Moderate/Strong])
+  Evidence: [how entities relate, correlations]
+
+**Key Finding:**
+[1 sentence: Most significant pattern across all categories]
+
+**Recommendation:**
+[1 specific action if pattern suggests one, else "None"]
+```
+
+**Rules:**
+- If no patterns in a category, omit that section
+- Evidence MUST be specific quotes/numbers from data
+- NO generic patterns - only what's explicitly observable
+- Be concise but complete
+
+**Data:**
+{context}"""),
+            ("user", "Categorize patterns into Statistical, Quantitative, Qualitative, and Relationships. Provide evidence for each.")
+        ])
+        
+        chain = analysis_prompt | llm | StrOutputParser()
+        response = chain.invoke({"context": data_blob})
+        
+        # Step 2: Post-processing - Trim verbose outputs
+        # Remove fluff and ensure conciseness
+        if len(response) > 300:  # If too long, summarize
+            print("Pattern Miner: Response too verbose, trimming...")
+            trim_prompt = ChatPromptTemplate.from_messages([
+                ("system", """Trim this pattern analysis to be concise (max 150 words). Remove fluff, generic statements, and repetition. Keep only specific patterns with evidence."""),
+                ("user", "Trim this to max 150 words, keeping only real patterns with evidence:\n\n{analysis}")
+            ])
+            trim_chain = trim_prompt | llm | StrOutputParser()
+            response = trim_chain.invoke({"analysis": response})
+        
+        return response
+    except Exception as e:
+        print(f"Error in Pattern Miner: {e}")
+        return f"Error in Pattern Miner: {e}"
+
+def run_global_stratified_miner(start_date=None, end_date=None, folders=None) -> str:
+    """
+    Enhanced Global Stratified Miner with improved sampling strategy and multi-step Map-Reduce analysis.
+    
+    Args:
+        start_date: Start date for filtering
+        end_date: End date for filtering
+        folders: Optional list of folders to analyze. If None, analyzes all folders.
+    """
+    try:
+        print("Running Enhanced Global Stratified Miner...")
+        if llm is None: return "Error: Base LLM is not loaded."
+        if embedding_model is None: return "Error: Embedding model is not loaded."
+        
+        vector_store = Chroma(persist_directory=CHROMA_DB_PATH, embedding_function=embedding_model)
+        all_metadatas = vector_store.get(include=["metadatas"])['metadatas']
+        if not all_metadatas:
+            return "The database is empty. Please ingest some documents first."
+        
+        # Get folders to analyze
+        unique_folders_all = list(set([m['folder'] for m in all_metadatas if 'folder' in m]))
+        if not unique_folders_all:
+            return "No folders found in the database to analyze."
+        
+        # If specific folders provided, use those; otherwise use all
+        folders_to_analyze = folders if folders else unique_folders_all
+        folders_to_analyze = [f for f in folders_to_analyze if f in unique_folders_all]
+        
+        if not folders_to_analyze:
+            return f"No valid folders found. Available folders: {unique_folders_all}"
+        
+        print(f"Analyzing folders: {folders_to_analyze}")
+
+        # Build date filter (Chroma needs separate $gte and $lte conditions)
+        date_filter = {}
+        if start_date and end_date:
+            start_datetime = datetime.combine(start_date, datetime.min.time())
+            end_datetime = datetime.combine(end_date, datetime.max.time())
+            start_ts = int(start_datetime.timestamp())
+            end_ts = int(end_datetime.timestamp())
+            # Chroma requires separate conditions, not combined in one dict
+            date_filter = {"$and": [
+                {"timestamp": {"$gte": start_ts}},
+                {"timestamp": {"$lte": end_ts}}
+            ]}
+
+        # STEP 1: MAP PHASE - Analyze each folder independently with diverse sampling
+        folder_analyses = []
+        
+        for folder in folders_to_analyze:
+            print(f"  [MAP] Analyzing folder: {folder}")
+            folder_filter = {"folder": folder}
+            if date_filter:
+                # Combine folder filter with date filter using $and
+                folder_filter = {"$and": [{"folder": folder}, date_filter]}
+            
+            # Enhanced sampling: Use multiple diverse queries to get better coverage
+            sampling_queries = [
+                "recent activities and events",
+                "important information and details",
+                "patterns and trends",
+                "key decisions and outcomes",
+                "challenges and solutions"
+            ]
+            
+            folder_docs = []
+            for query in sampling_queries:
+                try:
+                    docs = vector_store.similarity_search(
+                        query=query,
+                        k=3,  # 3 per query = 15 total per folder (better coverage)
+                        filter=folder_filter if folder_filter else None
+                    )
+                    folder_docs.extend(docs)
+                except Exception as e:
+                    print(f"    Warning: Error with query '{query}': {e}")
+            
+            # Remove duplicates based on content
+            seen_content = set()
+            unique_docs = []
+            for doc in folder_docs:
+                content_hash = hash(doc.page_content[:100])
+                if content_hash not in seen_content:
+                    seen_content.add(content_hash)
+                    unique_docs.append(doc)
+            
+            if unique_docs:
+                folder_context = "\n\n".join([doc.page_content for doc in unique_docs[:20]])  # Limit to 20 docs max
+                
+                # Analyze this folder's data
+                map_prompt = ChatPromptTemplate.from_messages([
+                    ("system", """Analyze folder data for patterns. Categorize into Statistical, Quantitative, Qualitative, Relationships.
+
+**Extract:**
+- **Statistical**: Trends, frequencies, counts
+- **Quantitative**: Numbers, percentages, ratios
+- **Qualitative**: Themes, topics, sentiment
+- **Relationships**: Connections between concepts
+
+**Output (CONCISE - max 150 words):**
+```
+=== [Folder Name] ===
+
+**Statistical:** [Trends/frequencies if any, else "None"]
+- [Pattern: evidence]
+
+**Quantitative:** [Metrics if any, else "None"]
+- [Metric: value]
+
+**Qualitative:** [Themes if any, else "None"]
+- [Theme: evidence]
+
+**Relationships:** [Connections if any, else "None"]
+- [Relationship: evidence]
+
+Summary: [2 sentences - key findings]
+```
+
+**Rules:**
+- Use ONLY explicit data
+- Be specific with evidence
+- Cut fluff
+
+**Folder:** {folder}
+**Data:**
+{data}"""),
+                    ("user", "Analyze this folder for categorized patterns (max 150 words). Provide evidence.")
+                ])
+                
+                map_chain = map_prompt | llm | StrOutputParser()
+                folder_analysis = map_chain.invoke({"folder": folder, "data": folder_context})
+                folder_analyses.append(folder_analysis)
+        
+        if not folder_analyses:
+            return "No data found in the specified date range for the selected folders."
+
+        # STEP 2: REDUCE PHASE - Find cross-folder patterns
+        combined_analysis = "\n\n".join([f"\n{folder_analysis}" for folder_analysis in folder_analyses])
+        
+        print(f"Running 'REDUCE' step: Finding cross-folder patterns across {len(folder_analyses)} folders...")
+        
+        reduce_prompt = ChatPromptTemplate.from_messages([
+            ("system", """Find cross-folder patterns and create important summary. Categorize patterns like Pattern Miner.
+
+**Categorize Cross-Folder Patterns:**
+1. **Statistical**: Trends/frequencies across folders
+2. **Quantitative**: Metrics/numbers spanning folders
+3. **Qualitative**: Themes common to multiple folders
+4. **Relationships**: Connections between folder contents
+
+**Output Format:**
+```
+=== GLOBAL STRATIFIED ANALYSIS ===
+
+Folders: {folders}
+Date Range: {date_range}
+
+**Cross-Folder Patterns:**
+
+**Statistical Patterns:**
+- [Pattern] (Folders: [X, Y]) - [evidence]
+
+**Quantitative Patterns:**
+- [Pattern] (Folders: [X, Y]) - [evidence]
+
+**Qualitative Patterns:**
+- [Pattern] (Folders: [X, Y]) - [evidence]
+
+**Relationships:**
+- [Pattern] (Folders: [X, Y]) - [evidence]
+
+**Important Summary (Key Insights Only):**
+[3-5 bullet points - ONLY the most important findings, not everything]
+- [Most significant finding 1]
+- [Most significant finding 2]
+- [Most significant finding 3]
+
+**Recommendation:**
+[1 sentence if action needed, else "None"]
+```
+
+**RULES:**
+- If folders are unrelated, say "Folders contain independent information. No cross-folder patterns."
+- Summary should be 3-5 bullet points max - only most important
+- Evidence must be from folder analyses
+- NO generic patterns
+
+**Folder Analyses:**
+{analyses}"""),
+            ("user", "Find cross-folder patterns (categorized) and create important summary (3-5 bullets max). Max 250 words total.")
+        ])
+        
+        # Format date range for display
+        date_range_str = f"{start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}" if start_date and end_date else "All dates"
+        
+        reduce_chain = reduce_prompt | llm | StrOutputParser()
+        response = reduce_chain.invoke({
+            "folders": ", ".join(folders_to_analyze),
+            "date_range": date_range_str,
+            "analyses": combined_analysis
+        })
+        
+        # Post-process: Trim if too verbose
+        if len(response) > 350:
+            print("Global Miner: Response too verbose, trimming...")
+            trim_prompt = ChatPromptTemplate.from_messages([
+                ("system", """Trim this analysis to max 250 words. Remove fluff, keep only real patterns with evidence and important summary (3-5 bullets)."""),
+                ("user", "Trim to max 250 words:\n\n{analysis}")
+            ])
+            trim_chain = trim_prompt | llm | StrOutputParser()
+            response = trim_chain.invoke({"analysis": response})
+        
+        return response
+    except Exception as e:
+        print(f"Error in Global Miner: {e}")
+        return f"Error in Global Miner: {e}"
+
+def run_viz_agent(analysis_data: str) -> tuple[str, list]:
+    """
+    Visualization Agent that generates 1-3 important Plotly charts from quantitative data.
+    Returns: (description_text, list_of_plotly_figures)
+    """
+    try:
+        print(f"Running Visualization Agent...")
+        if llm is None: return "Error: Base LLM is not loaded.", []
+        
+        # Step 1: Extract quantitative data in structured format
+        extract_prompt = ChatPromptTemplate.from_messages([
+            ("system", """Extract quantitative data in structured JSON format for visualization.
+
+**Extract:**
+- Numbers, percentages, counts
+- Categories with values (e.g., "Homework: 10%")
+- Time series data (if dates present)
+- Comparisons (if mentioned)
+
+**Output (JSON format):**
+```json
+{
+  "has_data": true/false,
+  "data_points": [
+    {"label": "Category1", "value": 10, "type": "percentage/number/count"},
+    {"label": "Category2", "value": 30, "type": "percentage"}
+  ],
+  "time_series": [
+    {"date": "2024-01-01", "value": 5},
+    {"date": "2024-02-01", "value": 8}
+  ] (optional, only if dates exist),
+  "comparisons": [
+    {"item1": "X", "item2": "Y", "difference": 15}
+  ] (optional)
+}
+```
+
+**Rules:**
+- If NO quantitative data, set "has_data": false
+- Extract ONLY explicit numbers
+- Preserve exact values from analysis
+
+**Analysis:**
+{analysis}"""),
+            ("user", "Extract quantitative data as JSON. If no data exists, return {\"has_data\": false}.")
+        ])
+        
+        extract_chain = extract_prompt | llm | StrOutputParser()
+        extracted_json = extract_chain.invoke({"analysis": analysis_data})
+        
+        # Parse JSON from response
+        try:
+            # Try to extract JSON from markdown code blocks
+            json_match = re.search(r'```json\s*(\{.*?\})\s*```', extracted_json, re.DOTALL)
+            if not json_match:
+                json_match = re.search(r'\{.*\}', extracted_json, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(1) if json_match.lastindex else json_match.group(0)
+                data = json.loads(json_str)
+            else:
+                data = json.loads(extracted_json)
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing error: {e}")
+            # Fallback: check if it says no data
+            if "NO_QUANTITATIVE_DATA" in extracted_json or "has_data\": false" in extracted_json.lower() or "\"has_data\": false" in extracted_json.lower():
+                return """**Visualization Not Possible**
+
+No quantitative data found in the analysis. Visualization requires numbers, percentages, or measurable metrics.""", []
+            return f"Error parsing extracted data. Please ensure quantitative data is available. Raw output: {extracted_json[:200]}", []
+        except Exception as e:
+            print(f"Error in visualization data extraction: {e}")
+            return f"Error extracting visualization data: {e}", []
+        
+        if not data.get("has_data", False):
+            return """**Visualization Not Possible**
+
+No quantitative data found in the analysis. Visualization requires numbers, percentages, or measurable metrics.""", []
+        
+        # Step 2: Generate 1-3 important visualizations
+        charts = []
+        description_parts = []
+        
+        # Chart 1: If we have category data points
+        if data.get("data_points") and len(data["data_points"]) > 0:
+            labels = [item["label"] for item in data["data_points"]]
+            values = [item["value"] for item in data["data_points"]]
+            
+            # Choose chart type based on data
+            if len(labels) <= 8 and all(v >= 0 for v in values):
+                # Pie chart for proportions
+                fig = go.Figure(data=[go.Pie(labels=labels, values=values)])
+                fig.update_layout(title="Distribution Analysis", showlegend=True)
+                charts.append(fig)
+                description_parts.append("**Chart 1: Distribution** - Shows proportion of categories")
+            else:
+                # Bar chart for comparisons
+                fig = go.Figure(data=[go.Bar(x=labels, y=values)])
+                fig.update_layout(title="Category Comparison", xaxis_title="Category", yaxis_title="Value")
+                charts.append(fig)
+                description_parts.append("**Chart 1: Category Comparison** - Shows values across categories")
+        
+        # Chart 2: Time series if available
+        if data.get("time_series") and len(data["time_series"]) > 1:
+            dates = [item["date"] for item in data["time_series"]]
+            values = [item["value"] for item in data["time_series"]]
+            fig = go.Figure(data=[go.Scatter(x=dates, y=values, mode='lines+markers')])
+            fig.update_layout(title="Trend Over Time", xaxis_title="Date", yaxis_title="Value")
+            charts.append(fig)
+            description_parts.append("**Chart 2: Trend Over Time** - Shows temporal progression")
+        
+        # Chart 3: Comparisons if available
+        if data.get("comparisons") and len(data["comparisons"]) > 0:
+            items = []
+            differences = []
+            for comp in data["comparisons"][:5]:  # Max 5 comparisons
+                items.append(f"{comp.get('item1', '')} vs {comp.get('item2', '')}")
+                differences.append(comp.get("difference", 0))
+            if items:
+                fig = go.Figure(data=[go.Bar(x=items, y=differences)])
+                fig.update_layout(title="Comparison Analysis", xaxis_title="Comparison", yaxis_title="Difference")
+                charts.append(fig)
+                description_parts.append("**Chart 3: Comparison** - Shows differences between entities")
+        
+        # Limit to 3 most important charts
+        charts = charts[:3]
+        description_parts = description_parts[:3]
+        
+        if not charts:
+            return """**Visualization Not Possible**
+
+Extracted data exists but cannot be visualized with current chart types.
+Data may need different visualization approach.""", []
+        
+        description = "**Generated Visualizations**\n\n" + "\n".join(description_parts)
+        description += f"\n\n*Generated {len(charts)} chart(s) from quantitative data in the analysis.*"
+        
+        return description, charts
+    except Exception as e:
+        print(f"Error in Visualization Agent: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"Error in Visualization Agent: {e}", []

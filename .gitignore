@@ -1,0 +1,10 @@
+/IBU_venv/
+/chroma_db/
+/merged_model_directory/
+/fine_tuning/insight_writer_agent(not-used)/merged_model_directory.zip
+/fine_tuning/insight_writer_fine-tuned/merged/
+/fine_tuning/insight_writer_fine-tuned/outputs/
+/fine_tuning/pattern_miner_fine-tuned/merged/
+/fine_tuning/pattern_miner_fine-tuned/outputs/
+/temp_files/
+__pycache__/

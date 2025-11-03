@@ -1,0 +1,159 @@
+Academic Calendar - Important Dates and Deadlines
+
+=== October 2025 ===
+
+October 5, 2025 (Saturday)
+- ME 319: Homework 3 Submission Deadline
+- Status: Submitted on time
+
+October 12, 2025 (Saturday)
+- ME 323 Project: Milestone 2 Review Meeting
+- Time: 2:00 PM
+- Location: Engineering Lab 305
+- Status: Completed successfully
+
+October 15, 2025 (Tuesday)
+- ME 319: Quiz 1
+- Time: 7:00 PM - 8:00 PM
+- Location: Main Hall, Room 101
+- Topics: Transfer functions, block diagrams, first/second order systems
+- Result: 82/100
+- Status: Completed
+
+October 18, 2025 (Friday)
+- ME 323 Project: Budget Review Meeting
+- Time: 3:00 PM
+- Participants: Team + Dr. Rodriguez
+- Status: Completed
+
+October 22, 2025 (Tuesday)
+- ME 319: Midterm Exam
+- Time: 6:00 PM - 8:00 PM
+- Location: Engineering Building, Room 205
+- Format: Closed book, 2 hours
+- Coverage: All topics up to Week 7
+- Result: 78/100
+- Status: Completed
+
+October 25, 2025 (Friday)
+- ME 319: Homework 4 Submission Deadline
+- Status: Submitted on time (90/100)
+
+October 28, 2025 (Monday)
+- ME 323 Project: Team Meeting - Prototype Review
+- Time: 4:00 PM
+- Location: Project Lab
+- Status: Completed
+
+=== November 2025 ===
+
+November 5, 2025 (Tuesday)
+- ME 319: Quiz 2
+- Time: 7:00 PM - 8:00 PM
+- Location: Main Hall, Room 101
+- Topics: PID controller design, stability analysis, frequency response
+- Status: Scheduled
+
+November 8, 2025 (Friday)
+- ME 323 Project: Milestone 3 Submission Deadline
+- Deliverables: Prototype assembly report, test results, updated CAD
+- Status: In Progress (85% complete)
+- Priority: HIGH
+
+November 12, 2025 (Tuesday)
+- ME 319: Homework 5 Submission Deadline
+- Topics: Digital implementation, Arduino controllers
+- Status: Not Started
+- Priority: MEDIUM
+
+November 15, 2025 (Friday)
+- ME 323 Project: Testing Phase Kickoff Meeting
+- Time: 2:00 PM
+- Location: Engineering Lab 305
+- Agenda: Testing protocols, safety review
+- Status: Scheduled
+
+November 18, 2025 (Monday)
+- ME 319: Tutorial 4 Submission Deadline
+- Status: Scheduled
+
+November 22, 2025 (Friday)
+- ME 323 Project: Testing and Calibration Phase Deadline
+- Deliverables: Test data, calibration reports, performance metrics
+- Status: Not Started
+- Priority: HIGH
+
+November 26, 2025 (Tuesday)
+- ME 319: Homework 6 Submission Deadline
+- Status: Scheduled
+
+=== December 2025 ===
+
+December 2, 2025 (Monday)
+- ME 319: Homework 7 Submission Deadline (Last homework)
+- Status: Scheduled
+
+December 5, 2025 (Thursday)
+- ME 323 Project: Final Report Submission Deadline
+- Format: PDF, 50+ pages, including all appendices
+- Status: Not Started
+- Priority: CRITICAL
+
+December 8, 2025 (Sunday)
+- ME 323 Project: Demo Day
+- Time: 10:00 AM - 2:00 PM
+- Location: Engineering Exhibition Hall
+- Format: Live demonstration + Q&A
+- Status: Scheduled
+
+December 10, 2025 (Tuesday)
+- ME 323 Project: Final Presentation
+- Time: 3:00 PM - 4:30 PM
+- Location: Main Auditorium
+- Duration: 20 minutes presentation + 10 minutes Q&A
+- Status: Scheduled
+- Priority: CRITICAL
+
+December 12, 2025 (Thursday)
+- ME 319: Tutorial 5 Submission Deadline
+- Status: Scheduled
+
+December 15, 2025 (Sunday)
+- ME 319: Tutorial 6 Submission Deadline (Last tutorial)
+- Status: Scheduled
+
+December 18, 2025 (Wednesday)
+- ME 319: Final Exam
+- Time: 9:00 AM - 12:00 PM
+- Location: Engineering Building, Room 205
+- Format: Closed book, comprehensive
+- Coverage: All course material
+- Status: Scheduled
+- Priority: CRITICAL
+
+=== Important Reminders ===
+
+- Project milestones have hard deadlines - no extensions
+- Quizzes are outside regular class hours - must attend
+- Homework is best 5 out of 7 - can drop lowest 2 scores
+- Tutorials are best 4 out of 6 - can drop lowest 2 scores
+- Final exam is 40% of total grade - high impact
+- Project presentation and demo are mandatory for passing
+
+=== Grade Calculation Timeline ===
+
+Current Scores (as of October 29):
+- Homework Average: 88.3% (10% weight)
+- Tutorial Average: 92.5% (10% weight)
+- Quiz Average: 82.0% (10% weight)
+- Midterm: 78.0% (30% weight)
+- Final Exam: TBD (40% weight)
+- Current Overall: 83.2%
+
+Project Progress:
+- Proposal: 92/100 (15% weight)
+- Progress Report: 88/100 (20% weight)
+- Final Report: TBD (40% weight)
+- Presentation: TBD (15% weight)
+- Demo: TBD (10% weight)
+

@@ -1,0 +1,78 @@
+ME 319 - Control Systems Course Information
+
+=== Course Overview ===
+Course Code: ME 319
+Course Name: Control Systems
+Semester: Fall 2025
+Instructor: Dr. Sarah Johnson
+Teaching Assistant: Raj Patel, Emily Chen
+
+=== Schedule ===
+Class meets: Monday, Tuesday, Thursday in Slot 2 (10:00 AM - 10:50 AM)
+Location: Engineering Building, Room 205
+
+=== Grading Breakdown ===
+Homework: 10% (best 5 out of 7 assignments)
+Tutorials: 10% (best 4 out of 6 tutorials)
+Quizzes: 10% (2 quizzes, 1 hour each)
+Midterm Exam: 30% (Closed book, scheduled by department)
+Final Exam: 40% (Closed book, scheduled by department)
+
+=== Course Content ===
+1. Introduction to Control Systems
+   - Basic concepts, feedback control
+   - System modeling approaches
+   
+2. Mathematical Modeling
+   - Transfer functions
+   - Block diagrams
+   - State-space representation
+   
+3. Time and Frequency Response Analysis
+   - Laplace and Fourier transforms
+   - First and second order systems
+   - Stability analysis (Routh-Hurwitz criterion)
+   
+4. Controller Design
+   - PID controller design for DC Motor
+   - Tuning methods (Ziegler-Nichols)
+   
+5. Digital Implementation
+   - Arduino as digital controller
+   - Discrete-time systems
+
+=== Project Information ===
+Project Title: Development of Multi-Hopper Laser Directed Energy Deposition Setup
+Project Code: ME323 Project
+Section: S2
+Team Members:
+- Khushi Sharma
+- Tanishq Narankar
+- Deepak Dhinwa
+
+Project Grade Breakdown:
+- Proposal: 15%
+- Progress Report: 20%
+- Final Report: 40%
+- Presentation: 15%
+- Demo: 10%
+
+=== Assessment Scores (Current Progress) ===
+Homework 1: 85/100
+Homework 2: 92/100
+Homework 3: 88/100
+Tutorial 1: 95/100
+Tutorial 2: 90/100
+Quiz 1: 82/100
+Midterm Exam: 78/100
+
+Current Overall Grade: 83.2% (B)
+
+=== Key Topics Covered ===
+- Transfer function representation
+- Block diagram reduction
+- Root locus analysis
+- Bode plots and frequency response
+- Nyquist stability criterion
+- PID controller tuning
+

@@ -1,0 +1,80 @@
+Personal Journal - Academic Reflections
+
+Entry Date: October 15, 2025
+
+=== Thoughts on ME 319 Control Systems ===
+
+I'm finding Control Systems to be quite challenging but rewarding. The mathematical modeling aspects are complex, especially when dealing with higher-order systems. My quiz score of 82 was a bit disappointing - I need to focus more on the frequency response analysis.
+
+The midterm exam result of 78% shows I'm understanding the basics but struggling with the more advanced PID tuning methods. I should schedule office hours with Dr. Johnson to clarify some concepts about Nyquist plots.
+
+I'm particularly interested in the Arduino implementation part. It's exciting to see how theoretical control concepts translate to real hardware. I've been spending extra hours in the lab trying to get my PID controller working properly for the DC motor assignment.
+
+=== Reflections on ME 323 Project ===
+
+The project is going well overall, but I'm feeling some pressure. We're at 75% completion on the prototype, which means we're slightly behind schedule. The powder hopper clogging issue is more persistent than we anticipated.
+
+I'm proud of our team's collaboration though. Khushi has been excellent at managing the CAD work, and Tanishq's troubleshooting skills have been invaluable. We meet twice a week now to keep things on track.
+
+The budget concern is real - we've used 64% already and we're only at milestone 3. We need to be more careful with material orders. I think we can still make it work if we optimize the remaining purchases.
+
+=== Academic Stress ===
+
+Balancing ME 319 coursework with the ME 323 project is tough. I find myself prioritizing the project because it's more hands-on, but that's affecting my performance in ME 319. My current grade of 83.2% is decent but I know I can do better.
+
+I need to create a better study schedule. Maybe block out specific hours each day for ME 319 homework and review. The frequency domain analysis is where I'm losing most points - that's my focus area for improvement.
+
+=== Goals for Next Week ===
+
+1. Complete ME 319 Homework 4 (due Thursday)
+2. Fix powder hopper vibration system
+3. Review Bode plots and stability margins
+4. Schedule meeting with Dr. Rodriguez about project timeline
+5. Submit project progress report draft
+
+Entry Date: October 22, 2025
+
+=== Weekly Update ===
+
+Good news: Homework 4 went much better! I scored 90/100. The extra time I spent reviewing transfer functions paid off. I'm feeling more confident about the upcoming Quiz 2.
+
+The powder hopper issue is partially resolved. The vibration system reduced clogging by about 60%, but we still have occasional jams. Tanishq suggested adding a secondary purge mechanism - we'll test that next week.
+
+=== Time Management ===
+
+I've been tracking my time more carefully:
+- ME 319 Study: 12 hours/week
+- Project Work: 18 hours/week  
+- Other Courses: 15 hours/week
+- Personal Time: 10 hours/week
+
+This feels more balanced. The structured approach is helping reduce stress.
+
+=== Academic Performance Trends ===
+
+Looking at my scores:
+- Homework average: 88.3% (improving trend)
+- Tutorials: 92.5% (consistent)
+- Quiz 1: 82% (needs improvement)
+- Midterm: 78% (below expectations)
+
+I see a pattern - I do well on assignments where I can take time to think, but struggle with time-pressured exams. This is something I need to work on through practice problems under time constraints.
+
+Entry Date: October 29, 2025
+
+=== Quiz 2 Performance ===
+
+Just took Quiz 2 and I'm cautiously optimistic. The PID controller design questions felt much clearer this time. I spent the weekend doing practice problems with the Arduino setup, which really helped visualize the concepts.
+
+The project prototype is now at 85% completion. We've integrated the purge mechanism and it's working well. We're back on track for the Week 12 testing milestone.
+
+=== Reflection on Progress ===
+
+Overall, I'm seeing improvement:
+- Better time management
+- More consistent study habits
+- Stronger team collaboration
+- Clearer understanding of control concepts
+
+I think my current trajectory is good. If I can maintain this pace, I should finish the semester strong. The key is not to get complacent - keep the momentum going.
+
