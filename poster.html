@@ -8,7 +8,9 @@
 :root { --ink:#1c1915; --muted:#5c564c; --line:#d9d1c3; --paper:#f6f1e7; --card:#fffdf8; --accent:#2F4A6E; }
 * { box-sizing:border-box; }
 body { margin:0; background:#e7e1d6; color:var(--ink); font-family:Georgia, "Iowan Old Style", serif; }
-.sheet { max-width:1100px; margin:28px auto; background:var(--paper); border:1px solid var(--line); }
+.sheet { max-width:1180px; margin:28px auto; background:var(--paper); border:1px solid var(--line); }
+.band { display:grid; grid-template-columns:1.25fr 1fr 0.9fr; border-top:1px solid var(--line); }
+.band section { padding-bottom:18px; }
 header { display:flex; justify-content:space-between; gap:24px; padding:28px 32px 18px; border-bottom:3px solid var(--accent); }
 h1 { font-size:34px; line-height:1.05; margin:0 0 8px; letter-spacing:-0.4px; }
 .claim { margin:0; font-family:"Segoe UI", sans-serif; font-size:16px; color:var(--muted); max-width:680px; }
@@ -26,7 +28,7 @@ ul { margin:0; padding-left:18px; }
 .stat span { font-family:"Segoe UI", sans-serif; font-size:12px; color:var(--muted); }
 footer { display:flex; justify-content:space-between; gap:20px; padding:16px 32px 22px; border-top:1px solid var(--line); font-family:"Segoe UI", sans-serif; font-size:14px; }
 code { font-family:Consolas, monospace; background:var(--card); border:1px solid var(--line); padding:2px 6px; }
-@media (max-width:800px) { .grid { grid-template-columns:1fr; } section { border-right:0; border-bottom:1px solid var(--line); } header, footer { display:block; } .tags { text-align:left; margin-top:12px; } }
+@media (max-width:800px) { .grid, .band { grid-template-columns:1fr; } section { border-right:0; border-bottom:1px solid var(--line); } header, footer { display:block; } .tags { text-align:left; margin-top:12px; } }
 </style>
 </head>
 <body>
@@ -44,8 +46,13 @@ code { font-family:Consolas, monospace; background:var(--card); border:1px solid
     <section><h2>Method</h2><ul><li>PDFs, text, and typed notes go into six folders in a local Chroma store.</li><li>llama3 writes. nomic-embed-text embeds. Both run in Ollama.</li><li>A pattern miner and an insight writer run on the retrieved passages.</li></ul></section>
     <section><h2>Evidence</h2><div class="stat"><b>44</b><span>chunks already stored</span></div><div class="stat"><b>7</b><span>documents in the store</span></div><div class="stat"><b>6</b><span>memory folders</span></div></section>
   </div>
+  <div class="band">
+    <section><h2>What the result actually says</h2><ul><li>A note, a PDF, or a text file lands in one of six folders: Academic, Journal, Bills, Events, Personal, Ideas.</li><li>Answers are restricted to the folders and the date range you pick, and they come back with the passages that were retrieved.</li><li>The store already has 44 chunks from 7 documents. Sample notes are in sample_data.</li></ul></section>
+    <section><h2>What it does not show</h2><ul><li>Nothing here calls an external LLM. If Ollama is down, or llama3 and nomic-embed-text are not pulled, the page has nothing to answer with.</li><li>The fine-tuned adapters under fine_tuning are kept and switched off. USE_CUSTOM_FINETUNED_MODEL is false, so the running app is llama3.</li></ul></section>
+    <section><h2>Beside the other attempts</h2><ul><li>Pattern miner and insight writer run on the retrieved text. If the text has numbers, the insight writer can chart them.</li><li>A separate global pass summarizes whole folders over a date range, instead of answering one question.</li></ul></section>
+  </div>
   <footer>
-    <div><h2>What came out of it</h2><ul><li>Fine-tuned adapters are on disk and switched off. The app uses llama3.</li><li>Ollama has to be running, with both models pulled, before the page is useful.</li></ul></div>
+    <div><h2>Stack</h2><p>Streamlit, Chroma, Ollama. Generation is llama3. Embeddings are nomic-embed-text. Environment is IBU_venv.</p></div>
     <div><h2>Look at it</h2><p>Run <code>.\run.ps1</code> after Ollama is up.</p></div>
   </footer>
 </article>
