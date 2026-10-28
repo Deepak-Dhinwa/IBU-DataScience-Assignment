@@ -10,7 +10,7 @@ from langchain_ollama import ChatOllama
 
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
-    page_title="Personal Cognitive Memory Agent",
+    page_title="Fieldnote",
     layout="wide",
 )
 
@@ -51,8 +51,8 @@ if "viz_description" not in st.session_state:
     st.session_state.viz_description = ""
 
 # --- 4. SIDEBAR (Ingestion & Global Controls) ---
-st.sidebar.title("Personal Memory")
-st.sidebar.markdown("This is the 'Ingestion Layer' of agent.")
+st.sidebar.title("Fieldnote")
+st.sidebar.markdown("Notes stay on this machine. Add a document, then ask from the folders you choose.")
 
 # --- Ingestion ---
 with st.sidebar.expander("Ingest New Memory", expanded=True):
@@ -226,8 +226,8 @@ with st.sidebar.expander("Run Global Pattern Miner"):
 
 # --- 5. MAIN CHAT INTERFACE ---
 
-st.title("Personal Cognitive Memory Agent")
-st.markdown("Give your query, and the specialized agents will find insights")
+st.title("Fieldnote")
+st.markdown("Ask about your notes. The answer comes back with the passage it used.")
 
 # Display chat messages from history (oldest first, like normal chat)
 for message in st.session_state.messages:

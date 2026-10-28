@@ -1,16 +1,11 @@
-# Personal Cognitive Memory Agent
+# Fieldnote
 
 One-page summary: open `poster.html` in a browser.
 Start: `.\run.ps1`
 
-Data Science Assignment
+**Deepak Dhinwa** · 23B2149 · Mechanical Engineering, IIT Bombay
 
-**Name:** Deepak Dhinwa  
-**Roll No:** 23B2149  
-**Department:** Mechanical Engineering  
-**Institution:** IIT Bombay
-
-A local personal-memory app. Notes and documents are stored in Chroma, then a small set of agents answers questions over that store. Everything runs on Ollama: `llama3` for generation and `nomic-embed-text` for embeddings. No external LLM API is required.
+A local memory for your own documents. Notes go into Chroma, then a small set of agents answers from that store and shows the passage it used. Everything runs on Ollama: `llama3` for writing and `nomic-embed-text` for embeddings. No external LLM API is required.
 
 ## What it does
 
